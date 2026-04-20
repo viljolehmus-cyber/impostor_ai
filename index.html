@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Imposter AI</title>
+
+<!-- PWA / Home screen -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Imposter AI">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  /* ======================================================
+     THEME
+     ====================================================== */
+  :root {
+    --bg: #000;
+    --text: #fff;
+    --muted: #8a8a8a;
+    --accent: #A855F7;
+    --accent-dark: #7e3dd6;
+    --card: #141414;
+    --border: #2a2a2a;
+    --danger: #ef4444;
+    --success: #4ade80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-user-select: none;
+    user-select: none;
+    line-height: 1.4;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ======================================================
+     LAYOUT / SCREEN ROUTER
+     ====================================================== */
+  #app {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 20px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 280ms ease, transform 280ms ease;
+    pointer-events: none;
+  }
+  .screen.active {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .screen-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ======================================================
+     TYPOGRAPHY
+     ====================================================== */
+  h1 { font-size: 44px; font-weight: 800; letter-spacing: -1px; }
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  p.sub { color: var(--muted); font-size: 16px; }
+
+  /* ======================================================
+     BUTTONS
+     ====================================================== */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 18px 20px;
+    border-radius: 16px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 120ms ease, background 120ms;
+  }
+  .btn:active { transform: scale(0.97); background: var(--accent-dark); }
+  .btn.secondary { background: #1f1f1f; color: var(--text); }
+  .btn.secondary:active { background: #292929; }
+  .btn.ghost { background: transparent; color: var(--muted); font-size: 15px; padding: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ======================================================
+     HOME
+     ====================================================== */
+  .logo {
+    font-weight: 900;
+    font-size: 54px;
+    letter-spacing: -2.5px;
+    line-height: 1;
+  }
+  .logo span { color: var(--accent); }
+  .home-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  .home-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ======================================================
+     INPUTS
+     ====================================================== */
+  .input {
+    width: 100%;
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 17px;
+    font-family: inherit;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .input:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; }
+
+  /* ======================================================
+     HEADER + BACK BUTTON
+     ====================================================== */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .back-btn {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    line-height: 1;
+  }
+
+  /* ======================================================
+     PLAYER LIST
+     ====================================================== */
+  .player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .player-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    animation: itemIn 250ms ease;
+  }
+  @keyframes itemIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+  }
+  .player-item span {
+    font-weight: 600;
+    font-size: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 10px;
+  }
+  .remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 10px;
+  }
+  .remove-btn:active { color: var(--danger); }
+
+  /* Character avatars */
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #1f1f1f;
+    object-fit: contain;
+    flex-shrink: 0;
+    image-rendering: auto;
+    overflow: visible;
+  }
+  .avatar.lg { width: 140px; height: 140px; padding: 10px; background: #1a1a1a; border: 2px solid var(--border); }
+  .avatar.md { width: 80px; height: 80px; padding: 6px; background: #1a1a1a; border: 1px solid var(--border); border-radius: 50%; }
+  .avatar.sm { width: 34px; height: 34px; }
+
+  /* Character picker (horizontal scroll) */
+  .char-picker-wrap { margin-top: 14px; }
+  .char-picker-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .char-picker-label > span:first-child { flex-shrink: 0; }
+  .char-picker-label > span:last-child { color: var(--text); font-weight: 600; font-size: 14px; text-align: right; }
+  .char-picker {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 4px 14px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    cursor: grab;
+  }
+  .char-picker.dragging { cursor: grabbing; }
+  .char-picker.dragging .char-option { pointer-events: none; }
+  .char-picker::-webkit-scrollbar { display: none; }
+  .char-option {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 2px;
+    transition: transform 120ms, border-color 120ms, opacity 120ms;
+  }
+  .char-option img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
+  .char-option:active { transform: scale(0.94); }
+  .char-option.selected {
+    border-color: var(--accent);
+    transform: scale(1.06);
+  }
+  .char-option.used { opacity: 0.25; pointer-events: none; }
+
+  .count-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-left: 8px;
+  }
+
+  /* ======================================================
+     CATEGORY GRID
+     ====================================================== */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .cat-btn {
+    padding: 22px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+    transition: all 120ms;
+  }
+  .cat-btn:active {
+    transform: scale(0.97);
+    border-color: var(--accent);
+  }
+  .cat-btn.ai {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #7e3dd6, #A855F7);
+    border: none;
+  }
+  .cat-btn.custom {
+    border-color: var(--accent);
+  }
+
+  /* ======================================================
+     REVEAL SCREEN (hold-to-reveal)
+     ====================================================== */
+  .reveal-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+  }
+  .pass-to { font-size: 18px; color: var(--muted); }
+  .pass-name {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-top: 4px;
+  }
+  /* FLIP CARD (tap once to reveal) */
+  .flip-card {
+    width: 260px;
+    height: 340px;
+    perspective: 1200px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 600ms cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+  .flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+  .flip-card-front,
+  .flip-card-back {
+    position: absolute;
+    inset: 0;
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    text-align: center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  .flip-card-front {
+    background: linear-gradient(135deg, #A855F7 0%, #7e3dd6 100%);
+    color: #fff;
+  }
+  .flip-card-back {
+    background: #0f0f0f;
+    border: 2px solid var(--accent);
+    transform: rotateY(180deg);
+  }
+  .card-eye { font-size: 72px; line-height: 1; }
+  .card-hint {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  .card-label {
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .card-instruction {
+    font-size: 15px;
+    color: var(--muted);
+    margin: 0;
+  }
+  .flip-card.shake .flip-card-inner {
+    animation: cardShake 300ms ease;
+  }
+  @keyframes cardShake {
+    0%, 100% { transform: rotateY(180deg); }
+    25% { transform: rotateY(180deg) translateX(-6px); }
+    75% { transform: rotateY(180deg) translateX(6px); }
+  }
+  .secret-word {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    padding: 0 16px;
+    color: #fff;
+    animation: wordPop 300ms ease;
+  }
+  .secret-word.imposter { color: var(--accent); font-size: 32px; line-height: 1.2; }
+  @keyframes wordPop {
+    from { transform: scale(0.9); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  #card-word { min-height: 60px; display: flex; align-items: center; justify-content: center; }
+
+  /* ======================================================
+     CLUE PHASE
+     ====================================================== */
+  .clue-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    padding: 0 10px;
+  }
+  .clue-index { color: var(--muted); font-size: 15px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .clue-name {
+    font-size: 52px;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+  }
+  .clue-prompt {
+    font-size: 17px;
+    color: var(--muted);
+    margin-top: 14px;
+    max-width: 320px;
+  }
+
+  /* ======================================================
+     VOTING
+     ====================================================== */
+  .vote-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .vote-btn {
+    padding: 24px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 120ms;
+    word-break: break-word;
+  }
+  .vote-btn:active {
+    transform: scale(0.96);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* ======================================================
+     RESULTS
+     ====================================================== */
+  .result-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 0 10px;
+  }
+  .result-badge { font-size: 72px; animation: pop 400ms cubic-bezier(.34,1.56,.64,1); }
+  @keyframes pop {
+    0%   { transform: scale(0); }
+    60%  { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+  .result-title {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -1px;
+  }
+  .result-sub {
+    color: #ccc;
+    font-size: 16px;
+    max-width: 340px;
+  }
+  .result-word {
+    font-size: 18px;
+    font-weight: 700;
+    background: var(--card);
+    padding: 14px 22px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    margin-top: 14px;
+  }
+  .imposter-tag { color: var(--accent); font-weight: 800; }
+
+  /* ======================================================
+     MISC
+     ====================================================== */
+  .footer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .htp {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+  }
+  .htp h3 {
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: var(--accent);
+  }
+  .htp p { font-size: 15px; color: #ccc; line-height: 1.5; }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #333;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+    margin: 10px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #222;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 250ms;
+    pointer-events: none;
+    z-index: 100;
+    border: 1px solid var(--border);
+    max-width: 80%;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* subtle radial bg for the home screen */
+  #screen-home::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    left: -10%;
+    right: -10%;
+    height: 60%;
+    background: radial-gradient(circle at 50% 50%, rgba(168,85,247,0.18), transparent 60%);
+    pointer-events: none;
+    z-index: -1;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================================================
+       HOME SCREEN
+       ============================================================ -->
+  <section id="screen-home" class="screen active">
+    <div class="home-content">
+      <div class="logo">Imposter<span>AI</span></div>
+      <p class="sub" style="max-width: 300px;">A social deduction party game.<br>One phone · 3 to 12 players.</p>
+    </div>
+    <div class="home-actions">
+      <button class="btn" onclick="goTo('players')">Play</button>
+      <button class="btn ghost" onclick="goTo('howto')">How to Play</button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       HOW TO PLAY
+       ============================================================ -->
+  <section id="screen-howto" class="screen screen-scroll">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('home')">←</button>
+      <h2>How to Play</h2>
+    </div>
+    <div>
+      <div class="htp"><h3>1. Add players</h3><p>Get 3 to 12 people together. Everyone shares this one phone.</p></div>
+      <div class="htp"><h3>2. Pick a category</h3><p>Choose a pre-made list — or generate a fresh one with AI on any topic.</p></div>
+      <div class="htp"><h3>3. See your secret word</h3><p>Pass the phone around. Each player taps the card to reveal their word. One player is the Imposter — they see no word.</p></div>
+      <div class="htp"><h3>4. Give clues</h3><p>Each player says ONE word related to the secret. The Imposter must bluff without knowing the word — listen carefully to everyone else first.</p></div>
+      <div class="htp"><h3>5. Vote</h3><p>Vote for who you think the Imposter is. If the majority catches them — players win. If they fool you — the Imposter wins.</p></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PLAYERS SCREEN
+       ============================================================ -->
+  <section id="screen-players" class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('home')">←</button>
+      <h2>Players <span id="player-count" class="count-pill">0 / 12</span></h2>
+    </div>
+    <p class="sub">3 to 12 players. Tap + or press Enter.</p>
+    <div class="char-picker-wrap">
+      <div class="char-picker-label">
+        <span>Choose a character</span>
+        <span id="char-selected-name">Agent</span>
+      </div>
+      <div id="char-picker" class="char-picker"></div>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <input id="player-input" class="input" placeholder="Player name" maxlength="20" autocomplete="off" autocapitalize="words">
+      <button class="btn" style="width:auto;padding:16px 22px;" onclick="addPlayer()" aria-label="Add player">+</button>
+    </div>
+    <div id="player-list" class="player-list"></div>
+    <div style="margin-top:14px;">
+      <button id="players-next" class="btn" onclick="goTo('category')" disabled>Next</button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CATEGORY SCREEN
+       ============================================================ -->
+  <section id="screen-category" class="screen screen-scroll">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('players')">←</button>
+      <h2>Pick Category</h2>
+    </div>
+    <div id="cat-grid" class="cat-grid"></div>
+  </section>
+
+  <!-- ============================================================
+       AI CATEGORY GENERATION
+       ============================================================ -->
+  <section id="screen-ai" class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('category')">←</button>
+      <h2>✨ Create with AI</h2>
+    </div>
+    <p class="sub">Type any topic — we'll generate a 40-word list for it.</p>
+    <input id="ai-input" class="input" placeholder="e.g. Anime, NBA Players, Finnish bands" maxlength="60" style="margin-top:16px;" autocomplete="off">
+    <div id="ai-status" style="text-align:center; margin-top:20px; color:var(--muted); font-size:15px;"></div>
+    <div style="margin-top:auto;">
+      <button id="ai-go" class="btn" onclick="runAI()">Generate</button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       REVEAL SCREEN
+       ============================================================ -->
+  <section id="screen-reveal" class="screen">
+    <div class="reveal-content">
+      <!-- Phase 1: pass the phone -->
+      <div id="reveal-phase-pass" style="display:flex; flex-direction:column; align-items:center; gap: 14px;">
+        <img id="reveal-avatar" class="avatar lg" alt="">
+        <p class="pass-to">Pass to</p>
+        <p id="reveal-name" class="pass-name">—</p>
+      </div>
+      <!-- Phase 2: tap card to reveal -->
+      <div id="reveal-phase-card" style="display:none; width:100%; flex-direction:column; align-items:center; gap: 18px;">
+        <div id="flip-card" class="flip-card" onclick="flipCard()">
+          <div class="flip-card-inner">
+            <div class="flip-card-front">
+              <div class="card-hint">Tap to reveal</div>
+            </div>
+            <div class="flip-card-back">
+              <div id="card-label" class="card-label">Your secret word</div>
+              <div id="card-word" class="secret-word">—</div>
+            </div>
+          </div>
+        </div>
+        <p id="card-instruction" class="card-instruction">Tap the card</p>
+      </div>
+    </div>
+    <div class="footer-actions">
+      <button id="reveal-start" class="btn" onclick="startReveal()">I'm Ready</button>
+      <button id="reveal-next" class="btn" onclick="nextReveal()" style="display:none;">Next Player →</button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CLUE PHASE
+       ============================================================ -->
+  <section id="screen-clue" class="screen">
+    <div class="clue-center">
+      <p id="clue-index" class="clue-index">Clue 1 of 5</p>
+      <img id="clue-avatar" class="avatar md" alt="">
+      <p id="clue-name" class="clue-name">—</p>
+      <p class="clue-prompt">Say ONE word related to the secret.</p>
+    </div>
+    <button class="btn" onclick="nextClue()">Next</button>
+  </section>
+
+  <!-- ============================================================
+       VOTING
+       ============================================================ -->
+  <section id="screen-vote" class="screen screen-scroll">
+    <h2 style="margin-top:10px;">Time to Vote</h2>
+    <p id="vote-sub" class="sub">—</p>
+    <div id="vote-grid" class="vote-grid"></div>
+  </section>
+
+  <!-- ============================================================
+       RESULTS
+       ============================================================ -->
+  <section id="screen-results" class="screen">
+    <div class="result-center">
+      <div id="result-badge" class="result-badge">🎉</div>
+      <img id="result-avatar" class="avatar md" alt="" style="display:none;">
+      <div id="result-title" class="result-title">Players win!</div>
+      <div id="result-sub" class="result-sub"></div>
+      <div id="result-word" class="result-word"></div>
+    </div>
+    <div class="footer-actions">
+      <button class="btn" onclick="playAgain()">Play Again</button>
+      <button class="btn secondary" onclick="resetGame(); goTo('home');">Home</button>
+    </div>
+  </section>
+
+  <!-- toast -->
+  <div id="toast" class="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   IMPOSTER AI  —  single-file party game
+   ============================================================ */
+
+/* --- Groq API key (user replaces this before using AI category) --- */
+const GROQ_API_KEY = "YOUR_KEY_HERE";
+
+/* --- Character avatars (base64 PNG) --- */
+const CHARACTERS = [
+  { id: 0, name: "Agent", img: "data:image/png;base64,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" },
+  { id: 1, name: "Agent", img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAwFBMVEUqIRkxJh9JMiXgq4lqV0uTcVuwinD7yaVjSTfpqXwxIRYuIxzh4eCmoJpkBwBcXln///8lSx1/AH9VVQCq6ao+PEIzRFVxjXF///+Li4v/AAD//wAAAAD0towXFBE1JRgOCAYmGRIUEg8LCQf8w5kUEg8JBwgOCggTFhEOCAUTEhAQDAoUFBIKCAcTExEVFBEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkaOmcAAAAMHRSTlMX7Pz+/f7+/f7+m17+/gIJAQ0CAwR3DwkCCwEBAP78/P370k/+siqSEs2PsjJuck+vU1aAAAAFGElEQVR42u2Z2bKbOBBAkRCLje3cZPYZoRUBYv3/v5uWWOxbSW45QKbmwf1gW5Sso+5WL7ID+pMleAFegBfgBXgB/kNAN2ptlNJ67H4CoGyUYdILY8z25bGA3rJhrAPEZwFKpY8DaKV4Runf9MzvAoj6IEBrR5qdg+B2u6vAOUbS6iMAJWvgNeNn+gtMdYRzhqRg6BZIofcDOtW4CTOAgpVgdBZYiizj0u4GBErCevcZtzqjn1tBwkgI0EaaLzsBmnGwfhb4Obebm322PC7yPBaCYy71TkALNn9U4ZO2sP08z0/5iQuJkN0H0NI59cxR4B2RVVakJ9i+l5AgIVm5C1D5A4nd65lWYBRyLfLTySmQgx5hhEW/C6DmoBIgEpM4X3a/IIqo/XUHoGRueYRYSqL45FY/ncKF4DQI89h+3gHo5Zx58iJJinX3YbhS8rCluwFY4KSIo3QSEoVFnsQpxggEY1HuAnj/ChITcRceEcLXEat2ARDmiPl17iLej5t9TpaciQjsc19RsOgaS7HS9A5AAGdTyjgBmz8AwOU5FmxRYw+gx2E+nZhHAIYYSA8BBPZUnObTuNoELAaAB2C3QwMe+rwA8VVEi19BASdkGkOA95sBb1TeAyqP5HQs8fws4m51FJN+h4kE+HeRIoxImkaxz0KQJyDpxXGYJ2SHD5SQ8V2FKV3M+cK/+UG6GVAKCfGK8SPD2wZjnJLVeHxzqlBn10NIgYv3gJgQsNV8uorYbk12PQumRgs9OGIyDJhqGSRp9bYNELQcZT5ZC55/V5LY1hs1CNjSwi0n/2uBMJfPNMHfBNR2BSCLw+Kb+w/5U61d8P1678qZCv6wMsq/QiQQez7IdDM0Q1nW4ziWX34cAMmsNJXAUMjWKMiTJIGOovX2McJaq9rWqMp8u4n5CCBZT0s10kBb6Cqg8odOoD5AcyqaqffLpkWg+3tTzwNq5q8ZbIBPo3swqrKH/OaqNBQhglTGmCv4+rHqq+4HnMyYqno4hIPxExp4Ha6XyxVyHLxBChqYhcU7YYzVla76fjCsft5E8NTP7sw0bhTsllwuyKXU64WdO9NR22pXeBASmDPTf+fm9vEFpBmXD2pA7IrATIIwxLh3aMUEikSKZELajReQe9PQNAHcDC4AAD1M144dIH4TUZJCYYg+CLkPAcMaSoFrgNjFAa4X5C62QwvfreIkEhGx5cYrVLVcwoEFn3tygT7perW/0qamVXkL+jhyCRfTt02AcQLUxp0/XdV/2QtU4ysR5wqetNohsUuHaOMNZ5hcUKsZhxgBADgZskRAtaUZBAuSKa62XqGmyNHL9w2a+qE5yzFIEX0PXrHdRoAPMvDkepbaqVP1d1tIIv67WnefN18CK/onpb9DxlgivHHdqfrqDG8FIIxs1avHFAAWYXPwdabeCShx4lInF5/e3Z3HNfa6vQDiinwRvwPQexlryr2ANIHmFEL1EfBp3Xendpron9qESR6mWKjxvhS4eay7rtOG7QWACijOp8ZagTTGtK11XbXynbYKdp8iMDg6DwyasHFwBcWLXK4GLT0A4BPGEgaZvzUfC7i5nDOslfqdHKbBuAA6xqrmDjBHAfTizc7F2HC8BnRJCZ3wOfRwDVaAZv56fjxATYRa+TSqfoIGUFmMgTCoptEsw2EAvSzp89zq5fIwQD1vul+LznO/szz/8343KMhGwzJ1bCAxjcf+QVE/vd7/9y+WF+AFeAFegBfgI/kXjdToowDdJ/MAAAAASUVORK5CYII=" },
+  { id: 2, name: "Detective", img: "data:image/png;base64,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" },
+  { id: 3, name: "Detective", img: "data:image/png;base64,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" },
+  { id: 4, name: "Anonymous", img: "data:image/png;base64,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" },
+  { id: 5, name: "Anonymous", img: "data:image/png;base64,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" },
+  { id: 6, name: "Tinfoil Hat", img: "data:image/png;base64,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" },
+  { id: 7, name: "Tinfoil Hat", img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAwFBMVEUAAADwunfhzZ8qKhs3S1RUSjVpZlGajW+uqpAdHBElJBbdu4z3wntnZ2OKclBIOib8/PxfXxHt58aoqKuuq5I6QTdRFBJIRjtLRztgXlCmo5BeXlCpqWyMiHQoUE0uPUNDNyaPinr/f3///6oAAH8AVQA9QjoA//9DNSB/AH9mZplmmWaCYj7/AAD/f///qlUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAolZMzAAAAMHRSTlMA/v33/vn7/PVfoP7+D/r2Ag39BKr2DV2pq11cClUP/qWKAgMCA5UBbgIFBfkBAgPKmMwxAAAEJ0lEQVR42u1YaY/iOBB1yvhOHBKgubp759yd2WPm//+7eeVAIKhbI2HzYaUUUsduQT371R0hZplllllmuZHV//0Cy/2D+TnQVjQPPL+w/Vo8DmGJCxhrsXiIqRvWT8r29ojd8yP8c01E2vRE4oBbFIdoWD8ZafhhXwBR0BY47ZF6Sqp1etD6pVzUsZ499VYFOolhlHVXyBJg4mDB/kDOIErjPnYLxyqh/4XZMTpc9FOQaftRfCrAzwu0j4qVNjatdLLFc37UrYTpdTse3Wqt7LhDXC+zCXLWSlZp1JUNcAHbR6VB0nPuBY4DG+raxgyHvY1ETR5JzbKxlCgxYfBPUKRUZLJUy2RZsewyAD6n/EDXJjCjCUJarfGlHGEl1loD0UnOT0hEbiWbSdLhgJ97+b74IilpJ1V1I3VID+NEl+enwwF9pKoedY+LmmiXGwqr5mf7JGRFrJHo6g7EQBSztD8x/04pqQb9sb3oD5FBMwGEa6FdyjYMtMgTEoMp2YIsMukYd8pfLqaojSfaQytVfQGQAYYBQIaV03nrkXmq4sUCFZJTqOsqq4+JNPVNhG91imP2INg5D8BdAYzUgDEW/gdigXIpoovPhzM1qm1bFOgax08AOU7ElbEKNKVpoAg2BwLtMwPNw01vLXG+Entp5bLU/5f+pjAO4Vo7djVTRCq/4+VoC2/egU3sxPcCydSrW4SzwT8UaY2E96kiV7dBYaQrod5Bi5OKq/IkUaPwuyIIXFKarUPeM0Pi4LsY3Uq/X3lZsoN3nFeRXhFpvMIgIneuFMITO9S0NnsAONin3IjWoKMwRml8TGovdlKi9Suj3m+RNyz3X8Zq7lbQ2Ol0hQIISMdSbcWu1dymMoC2Rlot/wZpnZB5HjScX+6QlQGA9BqD4XYVKF58gftqlWMFD+r/eQXXmPCd1EYlfjBCWaU1H12icuZw1LaI4o1KOjTXf42V0pIbDa23KQLjt/trmjOI1zZ5JNpUa2DmtVjZ3mBp0jCLb5C+NyE1wnPkhhDhjZhEerTB2vo9aW6sgX1MVZVT6r2dy7nfSiwb7rMl5j8MtIZ6Q1GJH1xVg7+XIy76SMz0r0uvWkwwNljJ4WBMCgTHVq6ozewq0GM1ycj4WOc8phy9VzzsbP70KHe4wac8igYAyWkumdspHH2z2Sj4Ewa4eG/32LGP1MEEZDb3QfF0ptT+VYij3ja7U1JVUd0fB53wporQshhTaMsx4SYpNbMGeGRkqReLxZXS03OxSMGcOeKkvmXxnuSXzKfmDYA/CgLc3kB6B4ZGhEIF8wrAp+Q9bl1xgJu9E69lATZuuvdFXtO6k1NuTn4/7HlXyMZu2qtM9iX0d9PI7SbvLsr1dH7Q6s7d8BDQRd/9ulKUvx/V3dlnvj5Ef1cirf22xZtllllmmeVN+QVbpCzUTEsXLgAAAABJRU5ErkJggg==" },
+  { id: 8, name: "Ninja", img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAwFBMVEUpLBqnlV4hIBYbHRNnX09nWTPiyIfZy2oiJBnQtnKLeFFFOiVfXwV4AADMs48VWApxcXEeHmq1rIkzTEz///8AAAAXGA8XFw/txnMWGBQWFxAXFxEXGBAXGBALCAImJhcXFxDz2Ivw1HgEBAQDBAELBwEmJg4HBwciJBkjJBkjJRgoJiX35JJNRisjGw+wmWQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAChQ46mAAAAMHRSTlMa/ulf/f79/qn+/f4DAv4EAgv9CgIA+dD+EW6OsE33+i/9/VGKrxAtkW/OC/z+/P6jBFDaAAAE6klEQVR42u2Z7ZaiOBCGQwBF7XF6ZpeK+SABQUARvP+72wqgTffOajcwc86eY/1CDXmoSqXqDZLwNxt5Ap6AJ+AJeAL+MCAWCphiwISIfwMgZTg5E3EcGColk/GsAK4AaBxyjtdH46I3kVTRfADBWGlIN5gbE4Q5XkRMzgUQDOPh9g/MzUn0V1LNA1Dv53EHZDUHQChy57fpAAHVnV8fRukhgLP7ySKiiQD5KFUeZCt5GCD+YESkpgD4r3L9+1dceOQBPK4IkZgA+Og/qf4K3WOMtxFyu5XxMYAqzQpc4tZ9fjoF5LvIsgPV9AAArLXMWkECGOPBawaNLlzoAFhAGTW173uO41yc1i4XZ+37G4M8MQLAteeBptclOIK5LJLz+Zzsd53tO0sWzpqqUQDqeRpY12nCFJxkt3P8tbPCqXdXyG51cRbnyyH89vU1KJDQaMjtkGMA1M7na60N9RHSmuPTBrSTIOBlRBbFGCRNCd5KAgobO+Niu24AtF4n9tMKNGh/sds7ozzAsgxeTX/YK3OCuo3LftU0YFaL1oGFBwb8ZLe/jARwvfF0cMQInUhm+kkxSn7SL8Gq0RignQ3RuI2WanxGNw9djvGyYVlh8B1nt9gl1vDRfSfZJ0k9FkAygLT3hoK3WmCOYqomNjV9f72yeYvXGy3HlgqBedqXgVIemtqzuwsnNweK2wtM7a39jb49xVcB6ID3s5FV1He0osjsxFqDCgmllBTp4ZCleb/dvw7AzbXd1nA6DgZhiSOua9zAmPK2Y8YVO7vV1tvtWtPybRv12UjcclBM5ehynTXeBgNyvNtwuGT5WACnWJ69Jvv7bs+DST2ZYEXSh2qCKHjUMgtbke48pGJTdZFrGwPIfydK3i4AFJOVHe4Gu6uijwgsUhFjDzXBJ7RppsHYxsjkIFKvubKteRbxKyEmJeGCIUSK3pgF4hKI6YDoJo1iqeBmrI1ZDGIyoA3zy03pYY0rA4yY/abKEV9MA/APhz0MPQsr6OUMKu+I8UmAq/7n0Zscxkh1nypgFRLIJPHbP596U9kR3DaetKrj/l57ABB9IYhBDhR9dL1X4BrnIcvGA2Q/IL6lUi6HhQN7D+51w8YC4hMJbWhy1ofqJWfDxDwiIEdt5FA+DoDhFsgI41tJkCCr4fkHyoN3Ts6eOw7g+r4B7WLitLUt/CZgcKbN0QPUduflPtkG/6Ue7wIKs0yWjlcbsG7gWAnvi8/J6DpZJiiP6CgP0nq/tBJ9hQT7HgQjcnI55wKrN+E8UujeZnn29WIB4wD+ftlaV0y7SsSgrXqquwZt8DDyk7qvYz1Y4nlg1ZRcGMMUGrtVOxHH3yTgkaquwR2Xppw6KA79pQM4zO0mqQIsdyfMnl4TkTBO09EbrTj4jodnDitdrg9JwQTXGl4pObEf8DRNaXvOk6bk1kqD5pbmFEe27czRMn8QXFP4tc3SMlvtw6PWMDFt6lClBH7iwUwAkV7LA7GtQN6SJpazeXAdKJiV3cfu9WAo5/KAlm4/sgOY+JPvuz4LQGHUa2yblxH2fW4P0O5si4z5QkUYC6FsN4jaBJLtphZzAPiHxIyGn8UcADaYkNn+OTPg3YyqD9mVx+cAWGlynbDNnyJqv2BK8HAeAAY+knhqHgQkjj71gv8rf1AU4Qh7/kn0BDwBT8AT8L8A/AOQVAE9wEO9NQAAAABJRU5ErkJggg==" },
+  { id: 9, name: "Alien", img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAwFBMVEUeHhkVFhAkJB4oKB2CgnxCQj1SUkxVVVFeXgSZmZVaWlWAfnlCQz1cXFyqqqoAagBCRD6qqlUAAH8AAP8/QDdAPzp/AH+qVVWKiIOdnZnAwLsAAACamZaioZ2np6IYGBIiIhqLioV2dnD///9YWFI3NzFra2UDAwIGBgMrKiWgnptKSkRVVVWzs65jYlx/f38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApFguPAAAAMHRSTlOgZ98S9u3WrAPncP6eHQMCaQMCAf/+AgNlr/wA/v79/fz8/gH6+P0uTvz+/AP9/QJo8KfHAAAEgUlEQVR42u2ZaZOjOAyGbQM5+pqZ3Zm9bNnYmDuQ///vVsaQ6U4TyALzYaui6jNVrQfJsvSqQ/gvNvIAPAAPwAPwPwMk/ffzLwGcJ35bDzjhZ84Ji3a7iDFS5BtHkPA8f8qOQhwB8Ks2lhQbAjD11IYCxMUARHsvgtyRHrLXshIfTeqa5JsAAk5aAPHZpFH5JhGQTIpRk2F8qdzlgIC0N/wj4ZnME+YAhb3pHwkZ+WMdIOFMTJmsKR7ScsCJUwNTABBkFYDnqZg2aYtkBSAgGUwD5kOYABw4Lb2bSgJUn70f8WW5nymk6RTt+sc0xujr2ybh+LeGxuR8RQRdhsCUSqm4Dj8QwLxgEUcgaNdrlwBcDTlXOlYxmorte0CtSJDgNYGZyzadomP3qJ1/Roh6V1N7SikJfqMpsMUpOnOq3QkjgMUEa4WoevD/l++DeBFhtxiQcKI7byUSOoex8mULmibBAV/5xp/kcgCeQdi5s5gjEgQBi2Nft2D70nnjtlkF8I1CY4p6U753k6Fy8nAFgCf9RYZMXQC1A2hfmpTku2rFGaCHui99q/oYlO0jeOPBgagSD2m/vEwvpyxEVvq7oLrbBpbyV/zbVHewxYAvSeG0SmfauutcDs1vF/Bgn7mfQjKtwu5u15UwGTakoRGJoxayC6ZYMw+u+vVHaeSNreqmeArh9QRAk/Cz5RX8sE62XA1lE9Vo2WU6pHzNRHO3jXycmiZ1ZvsQZDv7gPPCq0ivUySHFElDZoX8HeKXlvqWtLvjr++R7wVrR/0bsoF07ELAG2Y+ucf+EWwifr8VZfhcsnKHY7/PvavTNlZ0owXkCQWEyFKlUmv8aegsUizS7I4M3QF4qnxGtE1jpy5cy1Ol1SAN3SCCIqp+1qcIs9Za22IgGBSgbjyvBVyJ0wq8dT8b3exX7ge4nvVqa0SiQvqjOb7OEsjM+tF7zvTI9qFEg+PmzxUzeeh0smVjl1m10m1RpxUz2U9g0MqO5qiU4K7zctlC+gDScnQ3sAr3Z1eswVJlt+91nBrdQ8AwgyE0WTGVpakAqZH+BNSN/UbZJrOy2eXJMgDz1Smj9MYiVUYyTZtGk4WHHPkV+SYAyrpJFfaMl4mxMwHIW9zBBFSYIn0DYBujmBLRsgho1nTaR4bsxrIZp6IxkRGLU9RY05i6eR4HYHWx0gBoli8EFNraf3SM69hF0VXdx0VSJDklhK64ySQWLsnj/0+Y223uatf4gP1O4Bdy2XVrKbvW7Zr14XRa0Yu66gvIBSBQ/mptTOvOBMTXmT5310RDRD6sIRAqkuOuiUs5uCFKNkiRa0kXQN85UYeBqCop2EaqIh96Nbimk/AUnH8hNf1y2BjgR3A6CEfKNwK07wEJj4ZtxNLfNwHQ4f+aUOfu1F+HmyxtvoE2PQxjwT2z13JhJ9+P0ITbVBHfgfRSqNdBpNXdJnX8GmySIlxBjPc4DHjKXp72O+xx520APC8IS6PvKRl5W2Gzd0Dy4t1CnJzekuR84JsBgvPZH/h/t8f7aA/AA/AAPABb2L/xvM9Ra/l/1AAAAABJRU5ErkJggg==" },
+  { id: 10, name: "Zombie", img: "data:image/png;base64,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" },
+  { id: 11, name: "Zombie", img: "data:image/png;base64,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" },
+];
+
+/* --- Pre-made categories (work offline) --- */
+const CATEGORIES = {
+  "🐾 Animals": ["Lion","Elephant","Dolphin","Penguin","Kangaroo","Giraffe","Octopus","Eagle","Shark","Wolf","Tiger","Panda","Koala","Zebra","Flamingo","Cheetah","Gorilla","Hedgehog","Crocodile","Owl","Bear","Fox","Rabbit","Squirrel","Frog"],
+  "🍕 Food": ["Pizza","Sushi","Burger","Pasta","Tacos","Ramen","Pancakes","Burrito","Salad","Steak","Curry","Dumplings","Sandwich","Ice Cream","Chocolate","Donut","Waffle","Soup","Bread","Cheese","Lasagna","Kebab","Popcorn","Croissant","Nachos"],
+  "🎬 Movies": ["Titanic","Avatar","Inception","Gladiator","Jaws","Frozen","Shrek","Matrix","Batman","Joker","Rocky","Alien","Interstellar","Toy Story","Up","Coco","Avengers","Spider-Man","Star Wars","Casablanca","Braveheart","Parasite","Goodfellas","Whiplash","Jurassic Park"],
+  "🌍 Countries": ["France","Japan","Brazil","Canada","Egypt","Italy","Mexico","Australia","India","Germany","Spain","Greece","Thailand","Kenya","Norway","Finland","Iceland","Argentina","Vietnam","Portugal","Ireland","Morocco","Peru","Netherlands","Poland"],
+  "⚽ Sports": ["Soccer","Basketball","Tennis","Swimming","Boxing","Golf","Hockey","Baseball","Cricket","Rugby","Volleyball","Cycling","Skiing","Surfing","Skateboarding","Archery","Bowling","Badminton","Gymnastics","Fencing","Climbing","Judo","Wrestling","Karate","Running"],
+  "💼 Jobs": ["Doctor","Teacher","Chef","Lawyer","Pilot","Firefighter","Nurse","Artist","Engineer","Farmer","Plumber","Electrician","Carpenter","Astronaut","Detective","Journalist","Dentist","Photographer","Architect","Scientist","Musician","Actor","Baker","Barber","Mechanic"],
+  "🏰 Disney": ["Mickey Mouse","Simba","Ariel","Elsa","Moana","Woody","Buzz","Stitch","Mulan","Aladdin","Belle","Cinderella","Nemo","Dory","Olaf","Baymax","Maui","Tiana","Rapunzel","Pocahontas","Peter Pan","Pinocchio","Bambi","Tarzan","Hercules"],
+  "🎮 Video Games": ["Mario","Zelda","Minecraft","Fortnite","Pokemon","Tetris","Pac-Man","Sonic","Halo","FIFA","Roblox","Among Us","Skyrim","Fallout","Overwatch","Valorant","Portal","Kirby","Metroid","Doom","Witcher","GTA","Cyberpunk","Elden Ring","Stardew Valley"],
+  "🏷️ Brands": ["Nike","Adidas","Apple","Google","Amazon","Coca-Cola","Pepsi","McDonald's","Starbucks","Tesla","BMW","Samsung","Microsoft","Netflix","Spotify","Lego","Gucci","Rolex","Ikea","H&M","Zara","Disney","Nintendo","Sony","Lamborghini","Ferrari","Puma","Red Bull","Toyota","Chanel"],
+  "🦸 Superheroes": ["Superman","Batman","Spider-Man","Iron Man","Hulk","Thor","Captain America","Wonder Woman","Flash","Wolverine","Deadpool","Black Widow","Aquaman","Doctor Strange","Black Panther","Daredevil","Ant-Man","Hawkeye","Green Lantern","Catwoman","Storm","Magneto","Loki","Thanos","Joker"],
+  "🎵 Music": ["Beatles","Queen","Elvis","Madonna","Beyoncé","Drake","Eminem","Taylor Swift","Rihanna","Jay-Z","ABBA","Metallica","Nirvana","Coldplay","Ed Sheeran","Bruno Mars","Lady Gaga","Billie Eilish","Kanye West","Bob Marley","Michael Jackson","Adele","Shakira","BTS","Pink Floyd"],
+  "💻 Tech": ["iPhone","Laptop","Bluetooth","Wi-Fi","Keyboard","Mouse","Monitor","Headphones","Charger","USB","Camera","Drone","Tablet","Smartwatch","Printer","Router","Speaker","Microphone","Hard Drive","Graphics Card","Processor","Battery","Cable","Webcam","Console"],
+  "🍎 Fruits": ["Apple","Banana","Orange","Strawberry","Pineapple","Watermelon","Grape","Mango","Peach","Cherry","Kiwi","Pear","Lemon","Lime","Blueberry","Raspberry","Coconut","Avocado","Papaya","Pomegranate","Plum","Fig","Apricot","Melon","Dragonfruit"],
+  "🥤 Drinks": ["Coffee","Tea","Water","Juice","Beer","Wine","Cocktail","Lemonade","Milkshake","Smoothie","Coca-Cola","Pepsi","Fanta","Sprite","Champagne","Vodka","Whiskey","Rum","Tequila","Gin","Mojito","Margarita","Espresso","Latte","Hot Chocolate"],
+  "🚗 Cars": ["Ferrari","Lamborghini","Porsche","Tesla","BMW","Mercedes","Audi","Toyota","Honda","Ford","Chevrolet","Jeep","Volkswagen","Volvo",  "Nissan","Hyundai","Kia","Mazda","Subaru","Bugatti","Bentley","Rolls-Royce","Jaguar","Lexus","Mustang"],
+  "🏛️ Landmarks": ["Eiffel Tower","Big Ben","Colosseum","Pyramids","Statue of Liberty","Taj Mahal","Great Wall","Stonehenge","Mount Rushmore","Golden Gate","Sydney Opera House","Leaning Tower","Burj Khalifa","Acropolis","Machu Picchu","Christ Redeemer","Niagara Falls","Grand Canyon","Louvre","Kremlin","Petra","Angkor Wat","Tower Bridge","Mount Fuji","Sphinx"]
+};
+
+/* --- Custom AI-generated categories (persisted in localStorage) --- */
+let CUSTOM_CATEGORIES = {};
+try {
+  CUSTOM_CATEGORIES = JSON.parse(localStorage.getItem("imposter_custom_cats") || "{}");
+} catch (e) { CUSTOM_CATEGORIES = {}; }
+function saveCustomCats() {
+  localStorage.setItem("imposter_custom_cats", JSON.stringify(CUSTOM_CATEGORIES));
+}
+
+/* --- Global game state --- */
+let selectedCharId = 0;  // which character is queued for the next "add player"
+let gameState = {
+  players: [],
+  category: "",
+  word: "",
+  imposterIndex: -1,
+  revealIndex: 0,
+  clueIndex: 0,
+  voteIndex: 0,
+  votes: []
+};
+
+/* ============================================================
+   SCREEN ROUTER
+   ============================================================ */
+function goTo(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById("screen-" + name);
+  if (el) el.classList.add("active");
+
+  // per-screen hooks
+  if (name === "category") renderCategories();
+  if (name === "players") renderPlayerList();
+  if (name === "ai") {
+    document.getElementById("ai-status").innerHTML = "";
+    document.getElementById("ai-input").value = "";
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._tid);
+  toast._tid = setTimeout(() => t.classList.remove("show"), 1800);
+}
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[c]));
+}
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ============================================================
+   PLAYERS SCREEN
+   ============================================================ */
+function getChar(id) {
+  return CHARACTERS[id] || CHARACTERS[0];
+}
+
+function renderCharPicker() {
+  const picker = document.getElementById("char-picker");
+  picker.innerHTML = "";
+  const usedIds = new Set(gameState.players.map(p => p.charId));
+  CHARACTERS.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "char-option";
+    if (c.id === selectedCharId) d.classList.add("selected");
+    if (usedIds.has(c.id)) d.classList.add("used");
+    d.innerHTML = `<img src="${c.img}" alt="${escapeHtml(c.name)}">`;
+    d.addEventListener("click", () => {
+      if (usedIds.has(c.id)) return;
+      selectedCharId = c.id;
+      renderCharPicker();
+      document.getElementById("char-selected-name").textContent = c.name;
+    });
+    picker.appendChild(d);
+  });
+  // If current selected is used, auto-advance to next free
+  if (usedIds.has(selectedCharId)) {
+    const next = CHARACTERS.find(c => !usedIds.has(c.id));
+    if (next) {
+      selectedCharId = next.id;
+      document.getElementById("char-selected-name").textContent = next.name;
+      renderCharPicker();
+    }
+  } else {
+    document.getElementById("char-selected-name").textContent = getChar(selectedCharId).name;
+  }
+}
+
+function renderPlayerList() {
+  const list = document.getElementById("player-list");
+  list.innerHTML = "";
+  gameState.players.forEach((p, i) => {
+    const div = document.createElement("div");
+    div.className = "player-item";
+    const c = getChar(p.charId);
+    div.innerHTML = `<img class="avatar" src="${c.img}" alt="">
+                     <span>${escapeHtml(p.name)}</span>
+                     <button class="remove-btn" aria-label="Remove">✕</button>`;
+    div.querySelector(".remove-btn").addEventListener("click", () => {
+      gameState.players.splice(i, 1);
+      renderPlayerList();
+      renderCharPicker();
+    });
+    list.appendChild(div);
+  });
+  document.getElementById("player-count").textContent = gameState.players.length + " / 12";
+  document.getElementById("players-next").disabled = gameState.players.length < 3;
+  renderCharPicker();
+}
+
+function addPlayer() {
+  const input = document.getElementById("player-input");
+  const name = input.value.trim();
+  if (!name) return;
+  if (gameState.players.length >= 12) { toast("Max 12 players"); return; }
+  if (gameState.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    toast("Name already added"); return;
+  }
+  // ensure currently-selected character isn't already used
+  const usedIds = new Set(gameState.players.map(p => p.charId));
+  if (usedIds.has(selectedCharId)) {
+    const next = CHARACTERS.find(c => !usedIds.has(c.id));
+    if (!next) { toast("No characters left"); return; }
+    selectedCharId = next.id;
+  }
+  gameState.players.push({ name: name, charId: selectedCharId });
+  // advance selection to next unused character for convenience
+  const newUsed = new Set(gameState.players.map(p => p.charId));
+  const nextFree = CHARACTERS.find(c => !newUsed.has(c.id));
+  if (nextFree) selectedCharId = nextFree.id;
+  input.value = "";
+  renderPlayerList();
+  input.focus();
+}
+
+/* ============================================================
+   CATEGORY SCREEN
+   ============================================================ */
+function renderCategories() {
+  const grid = document.getElementById("cat-grid");
+  grid.innerHTML = "";
+
+  // pre-made
+  Object.keys(CATEGORIES).forEach(name => {
+    const btn = document.createElement("button");
+    btn.className = "cat-btn";
+    btn.textContent = name;
+    btn.addEventListener("click", () => pickCategory(name));
+    grid.appendChild(btn);
+  });
+  // custom AI
+  Object.keys(CUSTOM_CATEGORIES).forEach(name => {
+    const btn = document.createElement("button");
+    btn.className = "cat-btn custom";
+    btn.textContent = name;
+    btn.addEventListener("click", () => pickCategory(name));
+    // long-press to delete
+    let pressTimer = null;
+    btn.addEventListener("pointerdown", () => {
+      pressTimer = setTimeout(() => {
+        if (confirm(`Delete category "${name}"?`)) {
+          delete CUSTOM_CATEGORIES[name];
+          saveCustomCats();
+          renderCategories();
+        }
+      }, 700);
+    });
+    const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+    btn.addEventListener("pointerup", cancel);
+    btn.addEventListener("pointerleave", cancel);
+    btn.addEventListener("pointercancel", cancel);
+    grid.appendChild(btn);
+  });
+  // AI button
+  const aiBtn = document.createElement("button");
+  aiBtn.className = "cat-btn ai";
+  aiBtn.textContent = "✨ Create with AI";
+  aiBtn.addEventListener("click", () => goTo("ai"));
+  grid.appendChild(aiBtn);
+}
+
+function pickCategory(name) {
+  const allCats = { ...CATEGORIES, ...CUSTOM_CATEGORIES };
+  const words = allCats[name];
+  if (!words || !words.length) { toast("No words in that category"); return; }
+
+  gameState.category = name;
+  gameState.word = words[Math.floor(Math.random() * words.length)];
+  gameState.imposterIndex = Math.floor(Math.random() * gameState.players.length);
+  gameState.revealIndex = 0;
+
+  startRevealPhase();
+}
+
+/* ============================================================
+   AI CATEGORY GENERATION  (Groq)
+   ============================================================ */
+async function generateCategory(topic) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{
+        role: "user",
+        content: `Generate 40 single-word or short-phrase items for the category "${topic}". Return ONLY a JSON array of strings, no explanation. Example: ["item1", "item2", ...]`
+      }],
+      temperature: 0.8
+    })
+  });
+  if (!res.ok) throw new Error("API error " + res.status);
+  const data = await res.json();
+  let txt = data.choices[0].message.content.trim();
+  // strip markdown fences if present
+  txt = txt.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  // grab the first [...] array in case of preamble
+  const m = txt.match(/\[[\s\S]*\]/);
+  const jsonStr = m ? m[0] : txt;
+  const arr = JSON.parse(jsonStr);
+  if (!Array.isArray(arr)) throw new Error("Not a JSON array");
+  return arr.filter(x => typeof x === "string" && x.trim().length > 0)
+            .map(x => x.trim())
+            .slice(0, 40);
+}
+
+async function runAI() {
+  const topic = document.getElementById("ai-input").value.trim();
+  if (!topic) { toast("Type a topic first"); return; }
+  if (GROQ_API_KEY === "YOUR_KEY_HERE") {
+    document.getElementById("ai-status").innerHTML =
+      `<div style="color:#f87171;">Add your Groq API key in the code (GROQ_API_KEY constant) to use AI categories.</div>`;
+    return;
+  }
+
+  const btn = document.getElementById("ai-go");
+  const status = document.getElementById("ai-status");
+  btn.disabled = true;
+  btn.textContent = "Generating...";
+  status.innerHTML = `<div class="spinner"></div><div>Cooking up ${escapeHtml(topic)}...</div>`;
+
+  try {
+    const words = await generateCategory(topic);
+    if (words.length < 5) throw new Error("Too few words returned");
+    const catName = "✨ " + topic;
+    CUSTOM_CATEGORIES[catName] = words;
+    saveCustomCats();
+    status.innerHTML = `<div style="color:var(--success);">✓ Added "${escapeHtml(topic)}" with ${words.length} words!</div>`;
+    vibrate([20, 40, 20]);
+    setTimeout(() => goTo("category"), 800);
+  } catch (e) {
+    console.error(e);
+    status.innerHTML = `<div style="color:#f87171;">Failed: ${escapeHtml(e.message)}.<br>Check your API key &amp; internet, then try again.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Generate";
+  }
+}
+
+/* ============================================================
+   REVEAL PHASE (hold-to-peek with progress ring)
+   ============================================================ */
+function startRevealPhase() {
+  gameState.revealIndex = 0;
+  goTo("reveal");
+  setupRevealScreen();
+}
+
+function setupRevealScreen() {
+  document.getElementById("reveal-phase-pass").style.display = "flex";
+  document.getElementById("reveal-phase-card").style.display = "none";
+  document.getElementById("reveal-start").style.display = "";
+  document.getElementById("reveal-next").style.display = "none";
+  const p = gameState.players[gameState.revealIndex];
+  document.getElementById("reveal-name").textContent = p.name;
+  document.getElementById("reveal-avatar").src = getChar(p.charId).img;
+  // reset card state
+  const card = document.getElementById("flip-card");
+  card.classList.remove("flipped");
+  document.getElementById("card-word").innerHTML = "";
+  document.getElementById("card-label").textContent = "Your secret word";
+  document.getElementById("card-instruction").textContent = "Tap the card";
+}
+
+function startReveal() {
+  // Switch from "pass" to "card" view
+  document.getElementById("reveal-phase-pass").style.display = "none";
+  document.getElementById("reveal-phase-card").style.display = "flex";
+  document.getElementById("reveal-start").style.display = "none";
+  vibrate(10);
+}
+
+// Single-tap flip: first tap reveals, second tap hides. Next button appears after first reveal.
+function flipCard() {
+  const card = document.getElementById("flip-card");
+  const instruction = document.getElementById("card-instruction");
+
+  if (!card.classList.contains("flipped")) {
+    // About to flip FORWARD → write the word into the back face BEFORE the flip
+    const wordEl = document.getElementById("card-word");
+    const labelEl = document.getElementById("card-label");
+    if (gameState.revealIndex === gameState.imposterIndex) {
+      labelEl.textContent = "Role";
+      wordEl.innerHTML = `<div class="secret-word imposter">You are the<br>Imposter 🤫</div>`;
+    } else {
+      labelEl.textContent = "Your secret word";
+      wordEl.innerHTML = `<div class="secret-word">${escapeHtml(gameState.word)}</div>`;
+    }
+    card.classList.add("flipped");
+    instruction.textContent = "Tap again to hide";
+    vibrate(20);
+    // Show "Next player" button after a short reading delay
+    setTimeout(() => {
+      document.getElementById("reveal-next").style.display = "";
+    }, 400);
+  } else {
+    // Flip BACK → hide the word
+    card.classList.remove("flipped");
+    instruction.textContent = "Card hidden — pass the phone";
+    vibrate(10);
+    // Clear word after flip finishes so no peek is possible
+    setTimeout(() => {
+      document.getElementById("card-word").innerHTML = "";
+    }, 400);
+  }
+}
+
+function nextReveal() {
+  // If card is still showing the word, hide it immediately before advancing
+  const card = document.getElementById("flip-card");
+  if (card.classList.contains("flipped")) {
+    card.classList.remove("flipped");
+  }
+  gameState.revealIndex++;
+  if (gameState.revealIndex >= gameState.players.length) {
+    startCluePhase();
+  } else {
+    // small delay so the flip-back is visible before next player screen
+    setTimeout(setupRevealScreen, 150);
+  }
+}
+
+/* ============================================================
+   CLUE PHASE
+   ============================================================ */
+function startCluePhase() {
+  gameState.clueIndex = 0;
+  // shuffle turn order so the imposter isn't always last-known
+  gameState.clueOrder = shuffle(gameState.players.map((_, i) => i));
+  goTo("clue");
+  renderClue();
+}
+
+function renderClue() {
+  const order = gameState.clueOrder || gameState.players.map((_, i) => i);
+  const idx = order[gameState.clueIndex];
+  const p = gameState.players[idx];
+  document.getElementById("clue-index").textContent =
+    `Clue ${gameState.clueIndex + 1} of ${gameState.players.length}`;
+  document.getElementById("clue-name").textContent = p.name;
+  document.getElementById("clue-avatar").src = getChar(p.charId).img;
+}
+
+function nextClue() {
+  gameState.clueIndex++;
+  if (gameState.clueIndex >= gameState.players.length) {
+    startVotingPhase();
+  } else {
+    renderClue();
+  }
+}
+
+/* ============================================================
+   VOTING PHASE
+   ============================================================ */
+function startVotingPhase() {
+  gameState.voteIndex = 0;
+  gameState.votes = new Array(gameState.players.length).fill(0);
+  goTo("vote");
+  renderVote();
+}
+
+function renderVote() {
+  const voter = gameState.players[gameState.voteIndex];
+  document.getElementById("vote-sub").textContent =
+    `${voter.name}, who do you suspect?  (${gameState.voteIndex + 1}/${gameState.players.length})`;
+  const grid = document.getElementById("vote-grid");
+  grid.innerHTML = "";
+  gameState.players.forEach((p, i) => {
+    if (i === gameState.voteIndex) return; // can't vote for yourself
+    const btn = document.createElement("button");
+    btn.className = "vote-btn";
+    btn.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <img class="avatar" src="${getChar(p.charId).img}" alt="" style="width:48px; height:48px;">
+      <span>${escapeHtml(p.name)}</span>
+    </div>`;
+    btn.addEventListener("click", () => castVote(i));
+    grid.appendChild(btn);
+  });
+}
+
+function castVote(targetIndex) {
+  vibrate(15);
+  gameState.votes[targetIndex]++;
+  gameState.voteIndex++;
+  if (gameState.voteIndex >= gameState.players.length) {
+    showResults();
+  } else {
+    renderVote();
+  }
+}
+
+/* ============================================================
+   RESULTS
+   ============================================================ */
+function showResults() {
+  // find player(s) with most votes
+  let maxVotes = -1, topIndex = -1, tied = false;
+  gameState.votes.forEach((v, i) => {
+    if (v > maxVotes) { maxVotes = v; topIndex = i; tied = false; }
+    else if (v === maxVotes && maxVotes > 0) { tied = true; }
+  });
+
+  const imposter = gameState.players[gameState.imposterIndex];
+  const imposterName = imposter.name;
+  const playersWin = !tied && topIndex === gameState.imposterIndex;
+
+  goTo("results");
+
+  const badge   = document.getElementById("result-badge");
+  const title   = document.getElementById("result-title");
+  const sub     = document.getElementById("result-sub");
+  const wordEl  = document.getElementById("result-word");
+  const avatar  = document.getElementById("result-avatar");
+
+  // always show the imposter's avatar
+  avatar.src = getChar(imposter.charId).img;
+  avatar.style.display = "";
+
+  if (playersWin) {
+    badge.textContent = "🎉";
+    title.textContent = "Players win!";
+    sub.innerHTML = `You caught <span class="imposter-tag">${escapeHtml(imposterName)}</span> — they were the Imposter.`;
+    vibrate([30, 60, 30, 60, 30]);
+  } else if (tied) {
+    badge.textContent = "🤷";
+    title.textContent = "Imposter wins!";
+    sub.innerHTML = `Tied vote — <span class="imposter-tag">${escapeHtml(imposterName)}</span> was the Imposter and escapes.`;
+    vibrate([80, 40, 80]);
+  } else {
+    badge.textContent = "😈";
+    title.textContent = "Imposter wins!";
+    const votedOut = gameState.players[topIndex];
+    sub.innerHTML = `<span class="imposter-tag">${escapeHtml(imposterName)}</span> was the Imposter — you voted <b>${escapeHtml(votedOut.name)}</b>.`;
+    vibrate([80, 40, 80]);
+  }
+  wordEl.innerHTML = `Word was: <b>${escapeHtml(gameState.word)}</b>`;
+}
+
+/* ============================================================
+   PLAY AGAIN / RESET
+   ============================================================ */
+function playAgain() {
+  // keep players + category; new word + new imposter
+  const allCats = { ...CATEGORIES, ...CUSTOM_CATEGORIES };
+  const words = allCats[gameState.category];
+  if (!words) { goTo("category"); return; }
+  gameState.word = words[Math.floor(Math.random() * words.length)];
+  gameState.imposterIndex = Math.floor(Math.random() * gameState.players.length);
+  gameState.revealIndex = 0;
+  gameState.votes = [];
+  startRevealPhase();
+}
+
+function resetGame() {
+  gameState = {
+    players: [],
+    category: "",
+    word: "",
+    imposterIndex: -1,
+    revealIndex: 0,
+    clueIndex: 0,
+    voteIndex: 0,
+    votes: []
+  };
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  // player input: Enter to add
+  const pInput = document.getElementById("player-input");
+  pInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addPlayer(); }
+  });
+  // AI input: Enter to submit
+  const aInput = document.getElementById("ai-input");
+  aInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); runAI(); }
+  });
+  // prevent pinch-zoom stutter
+  document.addEventListener('touchmove', (e) => {
+    if (e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+
+  // Desktop support for the horizontal character picker:
+  //   1. Mouse wheel → scroll horizontally
+  //   2. Click + drag → scroll horizontally (and cancels stray clicks)
+  const picker = document.getElementById("char-picker");
+
+  picker.addEventListener("wheel", (e) => {
+    // Only hijack when the user is scrolling mostly vertically
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      picker.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  let isDown = false, startX = 0, startScroll = 0, moved = 0;
+  picker.addEventListener("mousedown", (e) => {
+    isDown = true;
+    moved = 0;
+    startX = e.pageX;
+    startScroll = picker.scrollLeft;
+  });
+  picker.addEventListener("mousemove", (e) => {
+    if (!isDown) return;
+    const dx = e.pageX - startX;
+    moved = Math.abs(dx);
+    if (moved > 4) picker.classList.add("dragging");
+    picker.scrollLeft = startScroll - dx;
+  });
+  const endDrag = () => {
+    if (!isDown) return;
+    isDown = false;
+    // If user dragged, suppress the next click so they don't accidentally select
+    if (moved > 4) {
+      picker.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }, { capture: true, once: true });
+    }
+    setTimeout(() => picker.classList.remove("dragging"), 50);
+  };
+  picker.addEventListener("mouseup", endDrag);
+  picker.addEventListener("mouseleave", endDrag);
+});
+
+// PWA: register service worker so the app works offline and can be installed
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(err => {
+      console.log("SW registration failed:", err);
+    });
+  });
+}
+</script>
+</body>
+</html>
